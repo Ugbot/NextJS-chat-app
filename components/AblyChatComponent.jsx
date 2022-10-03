@@ -1,23 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { useChannel } from "./AblyReactEffect";
+import { useChatChannels } from "./AblyReactEffectExtra";
 import styles from './AblyChatComponent.module.css';
 
 const AblyChatComponent = () => {
 
   let inputBox = null;
   let messageEnd = null;
-
+ 
   const [messageText, setMessageText] = useState("");
   const [receivedMessages, setMessages] = useState([]);
   const messageTextIsEmpty = messageText.trim().length === 0;
 
-  const [channel, ably] = useChannel("chat-demo", (message) => {
+  const [PublishChannel, channel, ably, userID] = useChatChannels("chat-demo", (message) => {
     const history = receivedMessages.slice(-199);
-    setMessages([...history, message]);
+    let msg_array = JSON.parse(message.data)
+
+    setMessages(history.concat(msg_array));
+    // msg_array.array.forEach(msg => {  
+    //   console.log(msg); 
+    //   setMessages([...history, msg]);
+    // });
+   
   });
 
+
+  
   const sendChatMessage = (messageText) => {
-    channel.publish({ name: "chat-message", data: messageText });
+  //  channel.publish({ name: "chat-message", data: messageText });
+    PublishChannel.publish({ name: "chat-message", data: {"user":userID , "txt": messageText }});
     setMessageText("");
     inputBox.focus();
   }
@@ -36,8 +46,11 @@ const AblyChatComponent = () => {
   }
 
   const messages = receivedMessages.map((message, index) => {
-    const author = message.connectionId === ably.connection.id ? "me" : "other";
-    return <span key={index} className={styles.message} data-author={author}>{message.data}</span>;
+   
+    let author = message.user == userID ? "me" : "other";
+
+    // const author = message.connectionId === ably.connection.id ? "me" : "other";
+    return <span key={index} className={styles.message} data-author={author}>{message.txt}</span>;
   });
 
   useEffect(() => {
